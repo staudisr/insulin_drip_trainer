@@ -528,7 +528,15 @@
 
         function loadScenario() {
             const scenario = currentScenarios[currentScenarioIndex];
-            questionText.innerText = scenario.question || scenario.q;
+            let rawText = scenario.question || scenario.q;
+            
+            // Dynamically strip out the "(Difficulty) Hour X:" prefixes and format the rechecks
+            let formattedText = rawText
+                .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?\s*\((30m\vert{}30\s*Min\s*Recheck)\):\s*/i, "30m recheck: ")
+                .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?\s*\((1hr\vert{}1\s*Hr\s*Recheck)\):\s*/i, "Returning to 1hr: ")
+                .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?:\s*/i, "");
+                
+            questionText.innerText = formattedText;
             
             if (document.getElementById("difficulty-title").innerText.includes("IMPOSSIBLE")) {
                 progressTracker.innerText = `Survival Tracker: Hour ${currentScenarioIndex + 1} / 100`;
