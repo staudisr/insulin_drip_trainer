@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insulin Drip Protocol Trainer</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; margin: auto; background-color: #f8f9fa; }
+        
+        /* Main Menu Styles */
+        #main-menu { text-align: center; margin-top: 50px; }
+        .menu-btn { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; width: 200px; }
+        .btn-easy { background-color: #28a745; }
+        .btn-easy:hover { background-color: #218838; }
+        .btn-medium { background-color: #ffc107; color: #212529; }
+        .btn-medium:hover { background-color: #e0a800; }
+        .btn-hard { background-color: #dc3545; }
+        .btn-hard:hover { background-color: #c82333; }
+
+        /* App Interface Styles */
+        #app-interface { display: none; } /* Hidden until a difficulty is selected */
+        .scenario-box { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #0056b3; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .table-container { width: 100%; overflow-x: auto; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { border-collapse: collapse; min-width: 1400px; font-size: 13px; }
+        th, td { border: 1px solid #999; padding: 6px; text-align: center; vertical-align: middle; }
+        th { background: #0056b3; color: white; position: sticky; top: 0; }
+        .instructions { background: #e9ecef; text-align: left; padding: 12px; font-size: 13px; font-weight: bold; width: 220px; line-height: 1.4; }
+        
+        /* Default (Odd) Row Styling */
+        .bg-row { background: #dee2e6; font-weight: bold; width: 100px; }
+        .cell-btn { width: 100%; height: 100%; padding: 8px 4px; font-size: 14px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 3px; transition: 0.1s; }
+        
+        /* Darker (Even) Row Styling */
+        tbody tr:nth-child(even) .bg-row { background: #ced4da; }
+        tbody tr:nth-child(even) .cell-btn { background: #e9ecef; border-color: #bbb; }
+        
+        .cell-btn:hover { background: #d0e1f9; }
+        .correct { background: #28a745 !important; color: white; border-color: #1e7e34; font-weight: bold; }
+        .incorrect { background: #dc3545 !important; color: white; border-color: #bd2130; font-weight: bold; }
+        
+        .feedback { min-height: 20px; font-weight: bold; margin-top: 15px; padding: 15px; border-radius: 5px; display: none; }
+        .feedback.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+        .feedback.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+        
+        #next-btn, #menu-btn { display: none; margin-top: 15px; padding: 10px 20px; font-size: 16px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #next-btn:hover, #menu-btn:hover { background: #004494; }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <h2>Neuro ICU Insulin Drip Trainer</h2>
+        <p>Select a difficulty level to begin:</p>
+        <button class="menu-btn btn-easy" onclick="startQuiz('easy')">Easy (Basic Starts)</button><br>
+        <button class="menu-btn btn-medium" onclick="startQuiz('medium')">Medium (Shifts)</button><br>
+        <button class="menu-btn btn-hard" onclick="startQuiz('hard')">Hard (Hypoglycemia)</button>
+    </div>
+
+    <div id="app-interface">
+        <h2 id="difficulty-title">Non-Surgical Critical Care Insulin Drip</h2>
+        
+        <div class="scenario-box">
+            <h3 id="question-text">Loading scenario...</h3>
+        </div>
+
+        <div class="table-container" id="grid-container">
+            <table id="drip-table">
+                <thead>
+                    <tr id="table-headers">
+                        <th>DIRECTIONS</th>
+                        <th>Blood Glucose ROW (mg/dl)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="feedback-box" class="feedback"></div>
+        <button id="next-btn" onclick="nextQuestion()">Next Hour</button>
+        <button id="menu-btn" onclick="returnToMenu()">Return to Main Menu</button>
+    </div>
+
+    <script>
+        // Grid Data Generation
+        const gridData = [
+            ["> 500", 3.6, 7.2, 10.8, 14.4, 18, 21.6, 25.2, 28.8, 32.4, 36, 39.6, 43.2, 46.8, 50.4, 54, 57.6],
+            ["451-500", 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51.2],
+            ["385-450", 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5, 40],
+            ["334-384", 2.1, 4.2, 6.3, 8.4, 10.5, 12.6, 14.7, 16.8, 18.9, 21, 23.1, 25.2, 27.3, 29.4, 31.5, 33.6],
+            ["290-333", 1.7, 3.4, 5.1, 6.8, 8.5, 10.2, 11.9, 13.6, 15.3, 17, 18.7, 20.4, 22.1, 23.8, 25.5, 27.2],
+            ["251-289", 1.4, 2.8, 4.2, 5.6, 7, 8.4, 9.8, 11.2, 12.6, 14, 15.4, 16.8, 18.2, 19.6, 21, 22.4],
+            ["217-250", 1.2, 2.4, 3.6, 4.8, 6, 7.2, 8.4, 9.6, 10.8, 12, 13.2, 14.4, 15.6, 16.8, 18, 19.2],
+            ["181-216", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            ["163-180", 0.8, 1.6, 2.4, 3.2, 4, 4.8, 5.6, 6.4, 7.2, 8, 8.8, 9.6, 10.4, 11.2, 12, 12.8],
+            ["141-162", 0.6, 1.2, 1.8, 2.4, 3, 3.6, 4.2, 4.8, 5.4, 6, 6.6, 7.2, 7.8, 8.4, 9, 9.6],
+            ["121-140", 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8],
+            ["111-120", 0.4, 0.9, 1.3, 1.8, 2.2, 2.7, 3.1, 3.6, 4, 4.5, 5, 5.4, 5.8, 6.3, 6.7, 7.2],
+            ["<110", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ];
+
+        const headerRow = document.getElementById("table-headers");
+        for (let i = 1; i <= 16; i++) {
+            const th = document.createElement("th");
+            th.innerHTML = `Column ${i}<br>(ml/hr)`;
+            headerRow.appendChild(th);
+        }
+
+        const tbody = document.querySelector("#drip-table tbody");
+        gridData.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            
+            // Re-aligned rowspans for accurate grouping
+            if (index === 0) tr.innerHTML += `<td rowspan="8" class="instructions">Start infusion using the drip rate (ml/hr) in COLUMN No. 2 for the current Blood Glucose Row.<br><br>To determine the new drip rate, compare the current BG ROW to the previous BG ROW.<br><br>If current BG ROW is lower than the previous BG ROW STAY IN THE SAME COLUMN.<br><br>If current BG ROW is the same or higher, MOVE 1 COLUMN TO THE RIGHT.</td>`;
+            else if (index === 8) tr.innerHTML += `<td rowspan="2" class="instructions">When BG is 141-180, STAY IN THE SAME COLUMN.</td>`;
+            else if (index === 10) tr.innerHTML += `<td rowspan="2" class="instructions">When BG is <141, Move 1 Col. to the Left</td>`;
+            else if (index === 12) tr.innerHTML += `<td rowspan="1" class="instructions">When BG is < 110, hold gtt, recheck BG in 30 min, then BG q 1 hour and restart 1 Col. to the Left when BG greater than 120</td>`;
+            
+            tr.innerHTML += `<td class="bg-row">${row[0]}</td>`;
+            for(let i = 1; i <= 16; i++) {
+                tr.innerHTML += `<td><button class="cell-btn" data-val="${row[i]}" data-col="${i}" data-row="${row[0]}">${row[i]}</button></td>`;
+            }
+            tbody.appendChild(tr);
+        });
+
+        // Scenario Database Organized by Difficulty (Now uses coordinates)
+        const allScenarios = {
+            easy: [
+                { question: "(Easy) You are starting an Insulin drip on your patient, you assess their FSBS and it is 263. Click the correct rate.", targetCol: "2", targetRow: "251-289", explanation: "Incorrect look at the top left corner of the page when starting an infusion you start in column 2 from there look at the row 251-289 where those two cross is the starting rate" },
+                { question: "(Easy) The next hour you assess their FSBS and it is 313. Click the correct new drip rate.", targetCol: "3", targetRow: "290-333", explanation: "Incorrect. Because the current BG row is the same or higher, you must move 1 column to the right (Column 2 -> Column 3)." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 230. Click the correct new drip rate.", targetCol: "3", targetRow: "217-250", explanation: "Incorrect. Because the new number is lower you are to stay in the same column. You should stay in Column 3." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 200. Click the correct new drip rate.", targetCol: "3", targetRow: "181-216", explanation: "Incorrect. Because the new number is lower you are to stay in the same column. You should stay in Column 3." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 275. Click the correct new drip rate.", targetCol: "4", targetRow: "251-289", explanation: "Incorrect. Because the current BG row is the same or higher, you must move 1 column to the right (Column 3 -> Column 4)." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 345. Click the correct new drip rate.", targetCol: "5", targetRow: "334-384", explanation: "Incorrect. Because the current BG row is the same or higher, you must move 1 column to the right (Column 4 -> Column 5)." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 310. Click the correct new drip rate.", targetCol: "5", targetRow: "290-333", explanation: "Incorrect. Because the new number is lower you are to stay in the same column. You should stay in Column 5." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 415. Click the correct new drip rate.", targetCol: "6", targetRow: "385-450", explanation: "Incorrect. Because the current BG row is the same or higher, you must move 1 column to the right (Column 5 -> Column 6)." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 370. Click the correct new drip rate.", targetCol: "6", targetRow: "334-384", explanation: "Incorrect. Because the new number is lower you are to stay in the same column. You should stay in Column 6." },
+                { question: "(Easy) The next hour you assess their FSBS and it is 285. Click the correct new drip rate.", targetCol: "6", targetRow: "251-289", explanation: "Incorrect. Because the new number is lower you are to stay in the same column. You should stay in Column 6." }
+            ],
+            medium: [
+                { question: "(Medium) Hour 1: You start an infusion for a FSBS of 345. Click the correct rate.", targetCol: "2", targetRow: "334-384", explanation: "Incorrect. The FSBS is 345. For a new start, begin in Column 2 at the 334-384 row." },
+                { question: "(Medium) Hour 2: FSBS is 395. Click the new rate.", targetCol: "3", targetRow: "385-450", explanation: "Incorrect. 395 moves the patient to a higher row. You must move 1 column to the right (Column 2 -> Column 3)." },
+                { question: "(Medium) Hour 3: FSBS is 315. Click the new rate.", targetCol: "3", targetRow: "290-333", explanation: "Incorrect. 315 is a lower row. The protocol dictates that if the current BG row is lower, you stay in the same column (Column 3)." },
+                { question: "(Medium) Hour 4: FSBS is 270. Click the new rate.", targetCol: "3", targetRow: "251-289", explanation: "Incorrect. 270 is a lower row, so you stay in the same column (Column 3)." },
+                { question: "(Medium) Hour 5: FSBS is 210. Click the new rate.", targetCol: "3", targetRow: "181-216", explanation: "Incorrect. 210 is a lower row, so you stay in the same column (Column 3)." },
+                { question: "(Medium) Hour 6: FSBS is 172. Click the new rate.", targetCol: "3", targetRow: "163-180", explanation: "Incorrect. 172 falls in the 163-180 row. The rule states: 'When BG is 141-180, STAY IN THE SAME COLUMN'. You remain in Column 3." },
+                { question: "(Medium) Hour 7: FSBS is 155. Click the new rate.", targetCol: "3", targetRow: "141-162", explanation: "Incorrect. 155 is in the 141-162 row. This is still within the 141-180 block, so you stay in the same column (Column 3)." },
+                { question: "(Medium) Hour 8: FSBS is 175. Click the new rate.", targetCol: "3", targetRow: "163-180", explanation: "Incorrect. 175 is higher than 155, but it is still within the 141-180 block. You must stay in the same column (Column 3)." },
+                { question: "(Medium) Hour 9: FSBS is 195. Click the new rate.", targetCol: "4", targetRow: "181-216", explanation: "Incorrect. 195 jumps up into the 181-216 row, which is in the top protocol section. Because this is a higher row, you must move 1 column to the right (Column 3 -> Column 4)." },
+                { question: "(Medium) Hour 10: FSBS is 235. Click the new rate.", targetCol: "5", targetRow: "217-250", explanation: "Incorrect. 235 is a higher row, so you must move 1 column to the right (Column 4 -> Column 5)." },
+                { question: "(Medium) Hour 11: FSBS is 295. Click the new rate.", targetCol: "6", targetRow: "290-333", explanation: "Incorrect. 295 is a higher row, so you must move 1 column to the right (Column 5 -> Column 6)." },
+                { question: "(Medium) Hour 12: FSBS is 265. Click the new rate.", targetCol: "6", targetRow: "251-289", explanation: "Incorrect. 265 is a lower row, so you stay in the same column (Column 6)." },
+                { question: "(Medium) Hour 13: FSBS is 170. Click the new rate.", targetCol: "6", targetRow: "163-180", explanation: "Incorrect. 170 drops significantly, but it falls into the 141-180 block. The rule is to stay in the same column (Column 6)." },
+                { question: "(Medium) Hour 14: FSBS is 185. Click the new rate.", targetCol: "7", targetRow: "181-216", explanation: "Incorrect. 185 moves out of the 141-180 block and into a higher row. You must move 1 column to the right (Column 6 -> Column 7)." },
+                { question: "(Medium) Hour 15: FSBS is 220. Click the new rate.", targetCol: "8", targetRow: "217-250", explanation: "Incorrect. 220 is a higher row, so you must move 1 column to the right (Column 7 -> Column 8)." }
+            ],
+            hard: [
+                { question: "(Hard) Hour 1: You start a new infusion for a FSBS of 480. Click the correct rate.", targetCol: "2", targetRow: "451-500", explanation: "Incorrect. FSBS 480. New starts always begin in Column 2." },
+                { question: "(Hard) Hour 2: The FSBS is exactly 480 again. Click the new rate.", targetCol: "3", targetRow: "451-500", explanation: "Incorrect. The BG ROW is the exact same. The top section rule states: 'If current BG ROW is the same or higher, MOVE 1 COLUMN TO THE RIGHT.' Move to Column 3." },
+                { question: "(Hard) Hour 3: The FSBS drops to 380. Click the new rate.", targetCol: "3", targetRow: "334-384", explanation: "Incorrect. 380 is a lower row, so you STAY in the same column (Column 3)." },
+                { question: "(Hard) Hour 4: The FSBS drops to the exact boundary of 333. Click the new rate.", targetCol: "3", targetRow: "290-333", explanation: "Incorrect. 333 is in a lower row (290-333), so you STAY in the same column (Column 3)." },
+                { question: "(Hard) Hour 5: The FSBS is 290. Click the new rate.", targetCol: "4", targetRow: "290-333", explanation: "Incorrect. 290 is the exact same row (290-333). Because the row is the same, you must MOVE 1 COLUMN TO THE RIGHT (Column 4)." },
+                { question: "(Hard) Hour 6: The FSBS drops rapidly to 175. Click the new rate.", targetCol: "4", targetRow: "163-180", explanation: "Incorrect. 175 is a lower row, but it falls in the 141-180 block. The rule is strictly STAY IN THE SAME COLUMN (Column 4)." },
+                { question: "(Hard) Hour 7: The FSBS is exactly 175 again. Click the new rate.", targetCol: "4", targetRow: "163-180", explanation: "Incorrect. 175 is in the 141-180 block. Even though the number didn't change, the rule for this block is always STAY IN THE SAME COLUMN (Column 4)." },
+                { question: "(Hard) Hour 8: The FSBS drops to 135. Click the new rate.", targetCol: "3", targetRow: "121-140", explanation: "Incorrect. 135 is <141. The protocol states: 'When BG is <141, Move 1 Col. to the Left.' Move from Column 4 to Column 3." },
+                { question: "(Hard) Hour 9: The FSBS is exactly 135 again. Click the new rate.", targetCol: "2", targetRow: "121-140", explanation: "Incorrect. 135 is still <141. Even though the number didn't change, the rule is to Move 1 Col to the Left every time you are in this block. Move from Column 3 to Column 2." },
+                { question: "(Hard) Hour 10: The FSBS drops to 105. Click the correct action.", targetCol: "2", targetRow: "<110", explanation: "Incorrect. FSBS is <110. You must hold the drip (0 ml/hr). Click the '0' cell." },
+                { question: "(Hard) Hour 10.5 (30 Min Recheck): The FSBS is 118. Click the correct action.", targetCol: "2", targetRow: "<110", explanation: "Incorrect. The protocol requires the BG to be 'greater than 120' to restart. Keep holding the drip (0 ml/hr)." },
+                { question: "(Hard) Hour 11.5 (1 Hr Recheck): The FSBS is 125. Click the new rate.", targetCol: "1", targetRow: "121-140", explanation: "Incorrect. You can restart, but you must restart '1 Col. to the Left' of where you were BEFORE the hold. You were on Column 2, so restart on Column 1." },
+                { question: "(Hard) Hour 12.5: The FSBS spikes to 225. Click the new rate.", targetCol: "2", targetRow: "217-250", explanation: "Incorrect. 225 is in a higher row. Move 1 column to the right (Column 1 -> Column 2)." },
+                { question: "(Hard) Hour 13.5: The FSBS spikes to 410. Click the new rate.", targetCol: "3", targetRow: "385-450", explanation: "Incorrect. 410 is a higher row. Move 1 column to the right (Column 2 -> Column 3)." },
+                { question: "(Hard) Hour 14.5: The FSBS is 515. Click the new rate.", targetCol: "4", targetRow: "> 500", explanation: "Incorrect. 515 is a higher row. Move 1 column to the right (Column 3 -> Column 4)." },
+                { question: "(Hard) Hour 15.5: The FSBS is exactly 515 again. Click the new rate.", targetCol: "5", targetRow: "> 500", explanation: "Incorrect. Same row (>500). Move 1 column to the right (Column 4 -> Column 5)." },
+                { question: "(Hard) Hour 16.5: The FSBS drops to 300. Click the new rate.", targetCol: "5", targetRow: "290-333", explanation: "Incorrect. 300 is a lower row. STAY in the same column (Column 5)." },
+                { question: "(Hard) Hour 17.5: The FSBS drops to 180. Click the new rate.", targetCol: "5", targetRow: "163-180", explanation: "Incorrect. 180 is the top edge of the 141-180 block. STAY in the same column (Column 5)." },
+                { question: "(Hard) Hour 18.5: The FSBS drops to 141. Click the new rate.", targetCol: "5", targetRow: "141-162", explanation: "Incorrect. 141 is the bottom edge of the 141-180 block. STAY in the same column (Column 5)." },
+                { question: "(Hard) Hour 19.5: The FSBS drops to 140. Click the new rate.", targetCol: "4", targetRow: "121-140", explanation: "Incorrect. 140 hits the <141 block. Move 1 column left (Column 5 -> Column 4)." },
+                { question: "(Hard) Hour 20.5: The FSBS drops to 95. Click the correct action.", targetCol: "4", targetRow: "<110", explanation: "Incorrect. FSBS is <110. Hold the drip (0 ml/hr)." },
+                { question: "(Hard) Hour 21 (30 Min Recheck): The FSBS is 130. Click the correct action.", targetCol: "3", targetRow: "121-140", explanation: "Incorrect. Restart 1 Col left of where you were before the hold. You were on Column 4, so restart on Column 3." },
+                { question: "(Hard) Hour 22: The FSBS drops to 115. Click the new rate.", targetCol: "2", targetRow: "111-120", explanation: "Incorrect. 115 is <141. Move 1 column left (Column 3 -> Column 2)." },
+                { question: "(Hard) Hour 23: The FSBS is exactly 115 again. Click the new rate.", targetCol: "1", targetRow: "111-120", explanation: "Incorrect. Same number, but still in the <141 block. Move 1 column left (Column 2 -> Column 1)." },
+                { question: "(Hard) Hour 24: The FSBS increases to 150. Click the new rate.", targetCol: "1", targetRow: "141-162", explanation: "Incorrect. 150 jumps into the 141-180 block. STAY in the same column (Column 1)." },
+                { question: "(Hard) Hour 25: The FSBS is 165. Click the new rate.", targetCol: "1", targetRow: "163-180", explanation: "Incorrect. 165 is still in the 141-180 block. STAY in the same column (Column 1)." },
+                { question: "(Hard) Hour 26: The FSBS is 185. Click the new rate.", targetCol: "2", targetRow: "181-216", explanation: "Incorrect. 185 moves OUT of the 141-180 block into a higher row. Move 1 column right (Column 1 -> Column 2)." },
+                { question: "(Hard) Hour 27: The FSBS is 216. Click the new rate.", targetCol: "3", targetRow: "181-216", explanation: "Incorrect. 216 is the exact same row (181-216). Same row means Move 1 column right (Column 2 -> Column 3)." },
+                { question: "(Hard) Hour 28: The FSBS drops to 125. Click the new rate.", targetCol: "2", targetRow: "121-140", explanation: "Incorrect. 125 falls into the <141 block. Move 1 column left (Column 3 -> Column 2)." },
+                { question: "(Hard) Hour 29: The FSBS drops to 80. Click the correct action.", targetCol: "2", targetRow: "<110", explanation: "Incorrect. FSBS is <110. Hold the drip (0 ml/hr)." }
+            ]
+        };
+
+        let currentScenarios = [];
+        let currentScenarioIndex = 0;
+        let answeredCorrectly = false;
+
+        const questionText = document.getElementById("question-text");
+        const feedbackBox = document.getElementById("feedback-box");
+        const nextBtn = document.getElementById("next-btn");
+        const menuBtn = document.getElementById("menu-btn");
+        const appInterface = document.getElementById("app-interface");
+        const mainMenu = document.getElementById("main-menu");
+        const gridContainer = document.getElementById("grid-container");
+
+        function startQuiz(difficulty) {
+            currentScenarios = allScenarios[difficulty];
+            currentScenarioIndex = 0;
+            
+            mainMenu.style.display = "none";
+            appInterface.style.display = "block";
+            gridContainer.style.display = "block";
+            menuBtn.style.display = "none";
+            
+            document.getElementById("difficulty-title").innerText = `Insulin Titration Trainer - ${difficulty.toUpperCase()}`;
+            
+            loadScenario();
+        }
+
+        function loadScenario() {
+            const scenario = currentScenarios[currentScenarioIndex];
+            questionText.innerText = scenario.question;
+            feedbackBox.className = "feedback"; 
+            feedbackBox.style.display = "none";
+            nextBtn.style.display = "none";
+            answeredCorrectly = false;
+
+            document.querySelectorAll(".cell-btn").forEach(btn => {
+                btn.className = "cell-btn"; 
+            });
+        }
+
+        document.querySelector("tbody").addEventListener("click", function(e) {
+            if (e.target && e.target.nodeName === "BUTTON") {
+                if (answeredCorrectly) return; 
+                
+                const selectedCol = e.target.getAttribute("data-col");
+                const selectedRow = e.target.getAttribute("data-row");
+                const currentScenario = currentScenarios[currentScenarioIndex];
+
+                if (selectedCol === currentScenario.targetCol && selectedRow === currentScenario.targetRow) {
+                    e.target.classList.add("correct");
+                    feedbackBox.innerText = "Correct! Proceed to the next check.";
+                    feedbackBox.className = "feedback success";
+                    feedbackBox.style.display = "block"; 
+                    answeredCorrectly = true;
+                    showNextOrMenuBtn();
+                } else {
+                    e.target.classList.add("incorrect");
+                    feedbackBox.innerText = currentScenario.explanation;
+                    feedbackBox.className = "feedback error";
+                    feedbackBox.style.display = "block"; 
+                    
+                    document.querySelectorAll(".cell-btn").forEach(btn => {
+                        if (btn.getAttribute("data-col") === currentScenario.targetCol && btn.getAttribute("data-row") === currentScenario.targetRow) {
+                            btn.classList.add("correct");
+                        }
+                    });
+                    
+                    answeredCorrectly = true;
+                    showNextOrMenuBtn();
+                }
+            }
+        });
+
+        function showNextOrMenuBtn() {
+            if (currentScenarioIndex < currentScenarios.length - 1) {
+                nextBtn.style.display = "block";
+            } else {
+                menuBtn.style.display = "block";
+                feedbackBox.innerText += " (End of this difficulty level.)";
+            }
+        }
+
+        function nextQuestion() {
+            currentScenarioIndex++;
+            loadScenario();
+        }
+
+        function returnToMenu() {
+            appInterface.style.display = "none";
+            mainMenu.style.display = "block";
+        }
+    </script>
+</body>
+</html>
