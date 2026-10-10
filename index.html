@@ -380,6 +380,9 @@
         let currentScenarios = [];
         let currentScenarioIndex = 0;
         let answeredCorrectly = false;
+        
+        // Tracks the last played bank for each difficulty so they don't repeat
+        let lastPlayed = { easy: -1, medium: -1, hard: -1 };
 
         const questionText = document.getElementById("question-text");
         const feedbackBox = document.getElementById("feedback-box");
@@ -391,8 +394,13 @@
 
         function startQuiz(difficulty) {
             const scenarioBanks = allScenarios[difficulty];
-            // Randomly select one of the banks from the chosen difficulty
-            const randomBankIndex = Math.floor(Math.random() * scenarioBanks.length);
+            
+            // Randomly select a bank, ensuring it isn't the same one played previously
+            let randomBankIndex = Math.floor(Math.random() * scenarioBanks.length);
+            while (randomBankIndex === lastPlayed[difficulty] && scenarioBanks.length > 1) {
+                randomBankIndex = Math.floor(Math.random() * scenarioBanks.length);
+            }
+            lastPlayed[difficulty] = randomBankIndex; // Save this bank to memory
             
             currentScenarios = scenarioBanks[randomBankIndex];
             currentScenarioIndex = 0;
