@@ -528,7 +528,7 @@
 
         function loadScenario() {
             const scenario = currentScenarios[currentScenarioIndex];
-            questionText.innerText = scenario.q;
+            questionText.innerText = scenario.question || scenario.q;
             
             if (document.getElementById("difficulty-title").innerText.includes("IMPOSSIBLE")) {
                 progressTracker.innerText = `Survival Tracker: Hour ${currentScenarioIndex + 1} / 100`;
