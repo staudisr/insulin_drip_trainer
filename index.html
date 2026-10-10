@@ -532,8 +532,8 @@
             
             // Dynamically strip out the "(Difficulty) Hour X:" prefixes and format the rechecks
             let formattedText = rawText
-                .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?\s*\((30m\vert{}30\s*Min\s*Recheck)\):\s*/i, "30m recheck: ")
-                .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?\s*\((1hr\vert{}1\s*Hr\s*Recheck)\):\s*/i, "Returning to 1hr: ")
+                .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?\s*\((30m|30\s*Min\s*Recheck)\):\s*/i, "30m recheck: ")
+                .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?\s*\((1hr|1\s*Hr\s*Recheck)\):\s*/i, "Returning to 1hr: ")
                 .replace(/^(\(.*?\)\s*)?Hour\s*\d+(\.\d+)?:\s*/i, "");
                 
             questionText.innerText = formattedText;
