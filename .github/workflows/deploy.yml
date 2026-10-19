@@ -11,6 +11,11 @@ jobs:
       - name: Checkout Private Source Code
         uses: actions/checkout@v4
 
+      - name: Configure Git Credentials
+        run: |
+          git config --global user.name "staudisr"
+          git config --global user.email "staudisr@gmail.com"
+
       - name: Push to Public Hosting Repository
         uses: cpina/github-action-push-to-another-repository@main
         env:
@@ -18,8 +23,8 @@ jobs:
         with:
           source-directory: '.'
           destination-github-username: 'staudisr'
-          destination-repository-username: 'staudisr'
           destination-repository-name: 'insulin_drip_grid_practice'
           user-email: 'staudisr@gmail.com'
+          user-name: 'staudisr'
           commit-message: 'Automated deployment from private source'
           target-branch: 'main'
