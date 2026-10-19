@@ -1,0 +1,24 @@
+name: Deploy Single File to Public Repo
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Private Source Code
+        uses: actions/checkout@v4
+
+      - name: Push to Public Hosting Repository
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.GH_PAGES_TOKEN }}
+        with:
+          source-directory: '.'
+          destination-github-username: 'staudisr'
+          destination-repository-name: 'insulin_drip_grid_practice'
+          user-email: 'staudisr@gmail.com'
+          commit-message: 'Automated deployment from private source'
+          target-branch: 'main'
