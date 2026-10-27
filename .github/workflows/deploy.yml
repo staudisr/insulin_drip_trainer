@@ -1,4 +1,4 @@
-name: Deploy Single File to Public Repo
+name: Deploy and Obfuscate to Public Repo
 
 on:
   push:
@@ -11,23 +11,32 @@ jobs:
       - name: Checkout Private Source Code
         uses: actions/checkout@v4
 
-      # Create a temporary folder and move ONLY the public files there
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Prepare deployment folder
         run: |
           mkdir deploy_folder
+          # Copy your clean private files into the temporary folder
           cp index.html deploy_folder/
-          # Add any other files you need public here, like CSS or images:
-          # cp styles.css deploy_folder/
+          cp game.js deploy_folder/
+
+      - name: Obfuscate the JavaScript
+        run: |
+          # Automatically scramble the game.js file inside the deploy folder
+          npx javascript-obfuscator deploy_folder/game.js --output deploy_folder/game.js
 
       - name: Push to Public Hosting Repository
         uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         with:
-          source-directory: 'deploy_folder' # Points ONLY to the safe folder
+          source-directory: 'deploy_folder'
           destination-github-username: 'staudisr'
           destination-repository-name: 'insulin_drip_grid_practice'
           user-email: 'staudisr@gmail.com'
           user-name: 'staudisr'
-          commit-message: 'Automated deployment of public files'
+          commit-message: 'Automated deployment with obfuscated JS'
           target-branch: 'main'
