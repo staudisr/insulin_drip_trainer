@@ -11,20 +11,23 @@ jobs:
       - name: Checkout Private Source Code
         uses: actions/checkout@v4
 
-      - name: Configure Git Credentials
+      # Create a temporary folder and move ONLY the public files there
+      - name: Prepare deployment folder
         run: |
-          git config --global user.name "staudisr"
-          git config --global user.email "staudisr@gmail.com"
+          mkdir deploy_folder
+          cp index.html deploy_folder/
+          # Add any other files you need public here, like CSS or images:
+          # cp styles.css deploy_folder/
 
       - name: Push to Public Hosting Repository
         uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         with:
-          source-directory: '.'
+          source-directory: 'deploy_folder' # Points ONLY to the safe folder
           destination-github-username: 'staudisr'
           destination-repository-name: 'insulin_drip_grid_practice'
           user-email: 'staudisr@gmail.com'
           user-name: 'staudisr'
-          commit-message: 'Automated deployment from private source'
+          commit-message: 'Automated deployment of public files'
           target-branch: 'main'
