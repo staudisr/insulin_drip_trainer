@@ -412,7 +412,7 @@ const gridData = [
 
         function startQuiz(difficulty) {
             if (difficulty === 'impossible') {
-                const confirmed = confirm("WARNING: Enter if you dare...\n\nHave you passed all other difficulty levels with no mistakes?\n\n(Click OK to proceed, Cancel to return to main menu)");
+                const confirmed = confirm("WARNING: Enter if you dare...\n\nHave you passed all other difficulty levels with no mistakes?\n\nI highly recommend using a pen and paper to write down your progress\n\n(Click OK to proceed, Cancel to return to main menu)");
                 if (!confirmed) return;
             }
 
