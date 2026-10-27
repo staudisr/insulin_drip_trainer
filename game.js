@@ -463,9 +463,24 @@ const gridData = [
             answeredCorrectly = false;
             pendingClicks = [];
 
+            const isImpossible = document.getElementById("difficulty-title").innerText.includes("IMPOSSIBLE");
+
+            // Reset all buttons first
             document.querySelectorAll(".cell-btn").forEach(btn => {
                 btn.className = "cell-btn"; 
             });
+
+            // Highlight the previous answer if it's past Hour 1 AND not on Impossible difficulty
+            if (currentScenarioIndex > 0 && !isImpossible) {
+                const prevScenario = currentScenarios[currentScenarioIndex - 1];
+                const prevCols = prevScenario.targetCol.split(',');
+
+                document.querySelectorAll(".cell-btn").forEach(btn => {
+                    if (prevCols.includes(btn.getAttribute("data-col")) && btn.getAttribute("data-row") === prevScenario.targetRow) {
+                        btn.classList.add("previous-cell");
+                    }
+                });
+            }
         }
 
         document.querySelector("tbody").addEventListener("click", function(e) {
